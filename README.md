@@ -70,60 +70,143 @@ require 'time'
 require 'bibsonomy/csl'
 
 module Jekyll
-
+  include Liquid::StandardFilters
+  Syntax = /(#{Liquid::QuotedFragment}+)?/
+  
   class BibSonomyPostList < Liquid::Tag
     def initialize(tag_name, text, tokens)
       super
-      parts = text.split(/\s+/)
-      @user = parts[0]
-      @tag = parts[1]
-      @count = Integer(parts[2])
+      
+      @attributes = {}
+      if text =~ Syntax
+        text.scan(Liquid::TagAttributes) do |key, value|
+          #p key + ":" + value
+          if @attributes.has_key?(key)
+            current_value = @attributes[key]
+            new_value = [current_value]
+            new_value << value
+            @attributes[key] = new_value
+          else
+            @attributes[key] = value
+          end
+        end
+      else
+        raise SyntaxError.new("Syntax Error in 'bibsonomy' - Valid syntax: bibsonomy user:x tag:x number_of_posts:x]")
+      end
+      @user = @attributes['user']
+      
+      @tags = @attributes['tag']
+      # if tags is only specified onces, convert string to array
+      if !@tags.kind_of?(Array)
+        @tags = [@tags]
+      end
+      
+      @grouping = @attributes['group'] == 'true'
+      @show_group_menu = @attributes['group_menu'] == 'true'
+      
+      @number_of_publications = @attributes['number_of_posts']
+      
+      @csl_style = @attributes['csl-style']
+      
+      # document handling
+      @pdf_postfix_preferred = @attributes['pdf_postfix']
+      if !@pdf_postfix_preferred.end_with? ".pdf"
+        @pdf_postfix_preferred += ".pdf"
+      end
+      @show_pdf_previews = @attributes['show_pdf_previews'] == 'true'
+      
+      # action menu
+      @link_pdfs = @attributes['pdfs'] == 'true'
+      @show_bibtex = @attributes['include_bibtex'] == 'true'
+      @show_abstract = @attributes['show_abstracts'] == 'true'
+      @show_doi = @attributes['show_doi_links'] == 'true'
+      @show_link = @attributes['show_links'] == 'true'
+      @system_link = @attributes['show_system_links'] == 'true'
     end
 
     def render(context)
       site = context.registers[:site]
-
-      # user name and API key for BibSonomy
-      user_name = site.config['bibsonomy_user']
-      api_key = site.config['bibsonomy_apikey']
-      csl = BibSonomy::CSL.new(user_name, api_key)
-
-      # target directory for PDF documents
-      pdf_dir = site.config['bibsonomy_document_directory']
-      csl.pdf_dir = pdf_dir
+      
+      # get global config for the tag
+      config = site.config['bibsonomy'] || {}
+      
+      user_name = config['apiuser']
+      api_key = config['apikey']
+      
+      renderer = BibSonomy::CSL.new(user_name, api_key)
+      if @link_pdfs
+        document_dir = config['document_directory']
+        
+        renderer.pdf_dir = document_dir
+        renderer.public_doc_postfix = @pdf_postfix_preferred
+      end
+      
+      renderer.link_pdfs
+      
+      if @show_pdf_previews
+        preview_dir = config['preview_directory']
+        
+        renderer.pdf_previews_dir = preview_dir
+      end
+      
+      renderer.bibtex_embedded = @show_bibtex
+      renderer.bibtex_link = false
+      
+      renderer.css_class = "publication-list"
+      
+      renderer.doi_link = @show_doi
+      renderer.url_link = @show_link
+      renderer.bibsonomy_link = @system_link
+      renderer.show_abstract = @show_abstract
+      
+      renderer.year_headings = @grouping
+      renderer.show_group_menu = @show_group_menu
 
       # CSL style for rendering
-      style = site.config['bibsonomy_style']
-      csl.style = style
-
-      html = csl.render(@user, [@tag], @count)
-
-      # set date to now
+      renderer.style = @csl_style
+      
+      html = renderer.render(@user, @tags, @number_of_publications)
+      
       context.registers[:page]["date"] = Time.new
-
       return html
     end
+    
   end
-
 end
 
-Liquid::Template.register_tag('bibsonomy', Jekyll::BibSonomyPostList)
+Liquid::Template.register_tag('bibsonomy_publication_list', Jekyll::BibSonomyPostList)
 ```
 
 The plugin can be used inside Markdown files as follows:
 
 ```Liquid
-{% bibsonomy jaeschke myown 100 %}
+{% bibsonomy_publication_list
+	user:jaeschke
+	tag:myown
+	number_of_posts:100
+	csl-style:springer-lecture-notes-in-computer-science
+	group:true
+	group_menu:true
+	pdfs:true
+	include_bibtex:true
+	show_doi_links:true
+	show_links:true
+	show_pdf_previews:false
+	show_abstracts:true
+	pdf_postfix:_oa
+	show_system_links:false
+%}
 ```
 
 Add the following options to your `_config.yml`:
 
 ```YAML
-bibsonomy_user: yourusername
-bibsonomy_apikey: yourapikey
-bibsonomy_document_directory: pdf
-# other: apa, acm-siggraph
-bibsonomy_style: springer-lecture-notes-in-computer-science
+bibsonomy:
+  url: https://www.bibsonomy.org
+  apiuser: yourusername
+  apikey: yourapikey
+  document_directory: pdf
+  preview_directory: preview
 ```
 
 For an example, have a look at [my publication list](http://www.kbs.uni-hannover.de/~jaeschke/publications.html).
