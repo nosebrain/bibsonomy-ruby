@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.summary       = %q{Wraps the BibSonomy REST API.}
   spec.description   = %q{Enables calls to the BibSonomy REST API with Ruby.}
   spec.homepage      = "https://github.com/rjoberon/bibsonomy-ruby"
-  spec.license       = "LGPL 2.1"
+  spec.license       = "LGPL-2.1"
 
   spec.files         = `git ls-files -z`.split("\x0")
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
