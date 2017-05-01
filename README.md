@@ -209,6 +209,73 @@ bibsonomy:
   preview_directory: preview
 ```
 
+Add the following scss file `bibsonomy.scss`: 
+
+```
+ul.publication-list {
+  li {
+    padding-bottom: 10px;
+  }
+  
+  div.publication-info {
+    display: table;
+    border-collapse:separate
+  }
+  
+  div.preview_container {
+    display: table-cell;
+    width: 70px;
+    height: 80px;
+    padding-right: 5px;
+  }
+  
+  div.item {
+    display: table-cell;
+    vertical-align: top;
+  }
+  
+  list-style: none;
+  margin-left: 0px;
+  
+  div.abstract {
+    padding: 10px;
+    font-size: 90%;
+    color: grey;
+    text-align: justify;
+  }
+  
+  div.bibtex, div.abstract {
+    display: none;
+  }
+  
+  ul.publication-actions {
+    font-size: 85%; 
+  }
+}
+
+ul.publication-actions {
+  margin-left: 0px;
+  li {
+    display: inline;
+    padding-left: 10px;
+  }
+  
+  li:first-of-type {
+    padding-left: 0px;
+  }
+  
+  li:first-of-type:before {
+    content: '';
+    margin-right: 0px;
+  }
+  
+  li:before {
+    content: '|';
+    margin-right: 0.5em;
+  }
+}
+```
+
 For an example, have a look at [my publication list](http://www.kbs.uni-hannover.de/~jaeschke/publications.html).
 
 
